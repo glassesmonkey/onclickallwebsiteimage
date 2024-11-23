@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片格式转换工具</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>图片格式转换工具</h1>
+        <div class="upload-section">
+            <div class="upload-box" id="dropZone">
+                <input type="file" id="imageInput" accept="image/jpeg, image/png, image/webp, image/gif, image/bmp, image/svg+xml">
+                <div class="upload-text">
+                    <p>点击或拖拽图片到此处</p>
+                    <p class="supported-formats">支持的格式: JPG, PNG, GIF, BMP, WebP, SVG</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview-section" id="previewSection" style="display: none;">
+            <h2>预览</h2>
+            <div class="preview-image">
+                <img id="preview" alt="预览图">
+            </div>
+            <div class="preview-info">
+                <p>原始尺寸: <span id="originalSize"></span></p>
+                <p>文件大小: <span id="fileSize"></span></p>
+            </div>
+            <button id="convertBtn" class="convert-btn">开始转换</button>
+        </div>
+
+        <div class="result-section" id="resultSection" style="display: none;">
+            <h2>转换结果</h2>
+            <div class="result-grid" id="resultGrid"></div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 
