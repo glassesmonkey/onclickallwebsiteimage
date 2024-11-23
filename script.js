@@ -8,6 +8,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileSize = document.getElementById('fileSize');
     const convertBtn = document.getElementById('convertBtn');
     const resultGrid = document.getElementById('resultGrid');
+    const qualitySlider = document.getElementById('qualitySlider');
+    const qualityValue = document.getElementById('qualityValue');
+    const compressedSizeJPG = document.getElementById('compressedSizeJPG');
+    const compressedSizePNG = document.getElementById('compressedSizePNG');
+    const compressedSizeWebP = document.getElementById('compressedSizeWebP');
+    const compressionRatioJPG = document.getElementById('compressionRatioJPG');
+    const compressionRatioPNG = document.getElementById('compressionRatioPNG');
+    const compressionRatioWebP = document.getElementById('compressionRatioWebP');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
 
     // 拖拽上传
     dropZone.addEventListener('dragover', (e) => {
@@ -42,6 +51,20 @@ document.addEventListener('DOMContentLoaded', function() {
         convertImages(img);
     });
 
+    // 添加滑块变化事件监听
+    qualitySlider.addEventListener('input', function() {
+        qualityValue.textContent = this.value + '%';
+        if (preview.src) {
+            calculateCompressedSizes(preview, this.value / 100);
+        }
+    });
+
+    // 添加下载所有图片的事件监听器
+    downloadAllBtn.addEventListener('click', downloadAllImages);
+
+    // 创建一个数组来存储所有的下载信息
+    let downloadItems = [];
+
     function handleImage(file) {
         // 验证文件格式
         const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/svg+xml'];
@@ -65,19 +88,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function convertImages(img) {
         resultGrid.innerHTML = '';
+        downloadItems = []; // 清空下载项数组
         resultSection.style.display = 'block';
+        
+        const quality = qualitySlider.value / 100;
 
-        // 转换为不同格式
-        convertToFormat(img, 'image/webp', 'converted.webp');
-        convertToFormat(img, 'image/png', 'converted.png');
+        // 转换为不同格式（带压缩）
+        convertToFormat(img, 'image/webp', 'converted.webp', quality);
+        convertToFormat(img, 'image/jpeg', 'converted.jpg', quality);
+        convertToFormat(img, 'image/png', 'converted.png', quality);
         
         // 生成不同尺寸的PNG图标
-        createResizedPNG(img, 16);
-        createResizedPNG(img, 48);
-        createResizedPNG(img, 128);
+        createResizedPNG(img, 16, quality);
+        createResizedPNG(img, 48, quality);
+        createResizedPNG(img, 128, quality);
     }
 
-    function convertToFormat(img, format, fileName) {
+    function convertToFormat(img, format, fileName, quality) {
         const canvas = document.createElement('canvas');
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
@@ -88,21 +115,19 @@ document.addEventListener('DOMContentLoaded', function() {
             if (blob) {
                 displayResult(blob, fileName, `${img.naturalWidth}x${img.naturalHeight}`);
             }
-        }, format);
+        }, format, quality);
     }
 
-    function createResizedPNG(img, size) {
+    function createResizedPNG(img, size, quality) {
         const canvas = document.createElement('canvas');
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext('2d');
         
-        // 保持宽高比例
         const scale = Math.min(size / img.naturalWidth, size / img.naturalHeight);
         const width = img.naturalWidth * scale;
         const height = img.naturalHeight * scale;
         
-        // 居中绘制
         const x = (size - width) / 2;
         const y = (size - height) / 2;
         
@@ -112,10 +137,16 @@ document.addEventListener('DOMContentLoaded', function() {
             if (blob) {
                 displayResult(blob, `icon${size}.png`, `${size}x${size}`);
             }
-        }, 'image/png');
+        }, 'image/png', quality);
     }
 
     function displayResult(blob, fileName, dimensions) {
+        // 存储下载信息
+        downloadItems.push({
+            blob: blob,
+            fileName: fileName
+        });
+
         const resultItem = document.createElement('div');
         resultItem.className = 'result-item';
         
@@ -147,5 +178,77 @@ document.addEventListener('DOMContentLoaded', function() {
         const sizes = ['Bytes', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // 添加计算压缩大小的函数
+    function calculateCompressedSizes(img, quality) {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        // 获取原始文件大小
+        const originalSize = parseInt(fileSize.textContent);
+        
+        // 计算 JPEG 压缩大小
+        canvas.toBlob((blob) => {
+            if (blob) {
+                const newSize = blob.size;
+                const ratio = ((1 - newSize / originalSize) * 100).toFixed(2);
+                compressedSizeJPG.textContent = formatFileSize(newSize);
+                compressionRatioJPG.textContent = `节省 ${ratio}%`;
+            }
+        }, 'image/jpeg', quality);
+        
+        // 计算 PNG 压缩大小
+        canvas.toBlob((blob) => {
+            if (blob) {
+                const newSize = blob.size;
+                const ratio = ((1 - newSize / originalSize) * 100).toFixed(2);
+                compressedSizePNG.textContent = formatFileSize(newSize);
+                compressionRatioPNG.textContent = `节省 ${ratio}%`;
+            }
+        }, 'image/png', quality);
+        
+        // 计算 WebP 压缩大小
+        canvas.toBlob((blob) => {
+            if (blob) {
+                const newSize = blob.size;
+                const ratio = ((1 - newSize / originalSize) * 100).toFixed(2);
+                compressedSizeWebP.textContent = formatFileSize(newSize);
+                compressionRatioWebP.textContent = `节省 ${ratio}%`;
+            }
+        }, 'image/webp', quality);
+    }
+
+    // 添加错误处理
+    function handleCompressionError(format, sizeElement, ratioElement) {
+        sizeElement.textContent = '不支持';
+        ratioElement.textContent = '不支持';
+    }
+
+    // 添加下载所有图片的函数
+    function downloadAllImages() {
+        // 创建一个 ZIP 文件
+        const zip = new JSZip();
+        
+        // 将所有图片添加到 ZIP 中
+        downloadItems.forEach(item => {
+            zip.file(item.fileName, item.blob);
+        });
+        
+        // 生成并下载 ZIP 文件
+        zip.generateAsync({type: "blob"})
+            .then(function(content) {
+                const zipUrl = URL.createObjectURL(content);
+                const link = document.createElement('a');
+                link.href = zipUrl;
+                link.download = "converted_images.zip";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(zipUrl);
+            });
     }
 }); 

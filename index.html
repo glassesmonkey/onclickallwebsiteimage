@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>图片格式转换工具</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -28,11 +29,37 @@
                 <p>原始尺寸: <span id="originalSize"></span></p>
                 <p>文件大小: <span id="fileSize"></span></p>
             </div>
+            <div class="compression-section">
+                <h3>图片压缩设置</h3>
+                <div class="compression-controls">
+                    <div class="quality-control">
+                        <label for="qualitySlider">压缩质量: <span id="qualityValue">80%</span></label>
+                        <input type="range" id="qualitySlider" min="1" max="100" value="80">
+                    </div>
+                    <div class="compression-info">
+                        <p>预计压缩后大小:</p>
+                        <ul class="compressed-sizes">
+                            <li>JPEG: <span id="compressedSizeJPG">计算中...</span></li>
+                            <li>PNG: <span id="compressedSizePNG">计算中...</span></li>
+                            <li>WebP: <span id="compressedSizeWebP">计算中...</span></li>
+                        </ul>
+                        <p>压缩率:</p>
+                        <ul class="compressed-sizes">
+                            <li>JPEG: <span id="compressionRatioJPG">计算中...</span></li>
+                            <li>PNG: <span id="compressionRatioPNG">计算中...</span></li>
+                            <li>WebP: <span id="compressionRatioWebP">计算中...</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
             <button id="convertBtn" class="convert-btn">开始转换</button>
         </div>
 
         <div class="result-section" id="resultSection" style="display: none;">
-            <h2>转换结果</h2>
+            <div class="result-header">
+                <h2>转换结果</h2>
+                <button id="downloadAllBtn" class="download-all-btn">下载所有图片</button>
+            </div>
             <div class="result-grid" id="resultGrid"></div>
         </div>
     </div>
