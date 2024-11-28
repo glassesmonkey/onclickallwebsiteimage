@@ -102,6 +102,9 @@ document.addEventListener('DOMContentLoaded', function() {
         createResizedPNG(img, 16, quality);
         createResizedPNG(img, 48, quality);
         createResizedPNG(img, 128, quality);
+        
+        // 添加 ICO 转换
+        createICO(img, quality);
     }
 
     function convertToFormat(img, format, fileName, quality) {
@@ -250,5 +253,109 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.body.removeChild(link);
                 URL.revokeObjectURL(zipUrl);
             });
+    }
+
+    // 添加 createICO 函数
+    function createICO(img, quality) {
+        // ICO 通常包含多个尺寸的图标
+        const sizes = [16, 32, 48];
+        const pngBlobs = [];
+        
+        // 创建所有尺寸的 PNG
+        const createAllSizes = sizes.map(size => {
+            return new Promise(resolve => {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                
+                // 计算缩放和居中
+                const scale = Math.min(size / img.naturalWidth, size / img.naturalHeight);
+                const width = img.naturalWidth * scale;
+                const height = img.naturalHeight * scale;
+                const x = (size - width) / 2;
+                const y = (size - height) / 2;
+                
+                ctx.drawImage(img, x, y, width, height);
+                
+                canvas.toBlob(blob => {
+                    pngBlobs.push({
+                        size: size,
+                        blob: blob
+                    });
+                    resolve();
+                }, 'image/png', quality);
+            });
+        });
+
+        // 当所有尺寸都创建完成后
+        Promise.all(createAllSizes).then(() => {
+            // 创建 ICO 文件
+            createICOFromPNGs(pngBlobs).then(icoBlob => {
+                displayResult(icoBlob, 'favicon.ico', `${sizes.join('x')}px`);
+            });
+        });
+    }
+
+    // 添加创建 ICO 文件的函数
+    function createICOFromPNGs(pngBlobs) {
+        return new Promise(async (resolve) => {
+            // ICO 文件头
+            const header = new Uint8Array([
+                0, 0,             // 保留，必须为0
+                1, 0,             // 图像类型，1=ICO
+                pngBlobs.length, 0 // 图像数量
+            ]);
+
+            // 收集所有数据
+            const headerSize = 6;
+            const directorySize = 16 * pngBlobs.length;
+            let offset = headerSize + directorySize;
+            const directory = [];
+            const imageData = [];
+
+            // 处理每个PNG
+            for (const png of pngBlobs) {
+                const arrayBuffer = await png.blob.arrayBuffer();
+                const data = new Uint8Array(arrayBuffer);
+                
+                // 创建目录条目
+                const entry = new Uint8Array([
+                    png.size, png.size, // 宽度和高度
+                    0,                  // 调色板颜色数
+                    0,                  // 保留
+                    1, 0,               // 颜色平面
+                    32, 0,              // 位数
+                    data.length & 0xFF, (data.length >> 8) & 0xFF, (data.length >> 16) & 0xFF, (data.length >> 24) & 0xFF, // 图像大小
+                    offset & 0xFF, (offset >> 8) & 0xFF, (offset >> 16) & 0xFF, (offset >> 24) & 0xFF // 图像偏移
+                ]);
+
+                directory.push(entry);
+                imageData.push(data);
+                offset += data.length;
+            }
+
+            // 合并所有数据
+            const finalSize = headerSize + directorySize + imageData.reduce((sum, data) => sum + data.length, 0);
+            const finalData = new Uint8Array(finalSize);
+            
+            // 复制头部
+            finalData.set(header, 0);
+            
+            // 复制目录
+            let pos = headerSize;
+            directory.forEach(entry => {
+                finalData.set(entry, pos);
+                pos += 16;
+            });
+            
+            // 复制图像数据
+            imageData.forEach(data => {
+                finalData.set(data, pos);
+                pos += data.length;
+            });
+
+            resolve(new Blob([finalData], { type: 'image/x-icon' }));
+        });
     }
 }); 
